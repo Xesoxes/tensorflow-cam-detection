@@ -39,7 +39,7 @@ const HomePage = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   //STATE
-  const [mirror, setMirror] = useState<boolean>(false);
+  const [mirror, setMirror] = useState<boolean>(true);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [autoRecordEnabled, setAutoRecordEnabled] = useState<boolean>(false);
   const [volume, setVolume] = useState(0.8);
@@ -73,7 +73,7 @@ const HomePage = () => {
       webcamRef.current.video?.readyState === 4
     ) {
       const predictions: DetectedObject[] = await model.detect(
-        webcamRef.current.video,
+        webcamRef.current.video
       );
 
       resizeCanvas(canvasRef, webcamRef);
@@ -84,10 +84,10 @@ const HomePage = () => {
   useEffect(() => {
     interval = setInterval(() => {
       runPrediction();
-    }, 1000);
+    }, 100);
 
     return () => clearInterval(interval);
-  }, [webcamRef.current, model]);
+  }, [webcamRef.current, model, mirror]);
 
   return (
     <div className="flex h-screen">
@@ -323,7 +323,7 @@ export default HomePage;
 
 function resizeCanvas(
   canvasRef: React.RefObject<HTMLCanvasElement>,
-  webcamRef: React.RefObject<Webcam>,
+  webcamRef: React.RefObject<Webcam>
 ) {
   const canvas = canvasRef.current;
   const video = webcamRef.current?.video;

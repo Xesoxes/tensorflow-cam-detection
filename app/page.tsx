@@ -130,7 +130,7 @@ const HomePage = () => {
     }, 100);
 
     return () => clearInterval(interval);
-  }, [webcamRef.current, model, mirror, autoRecordEnabled]);
+  }, [webcamRef.current, model, mirror, autoRecordEnabled, runPrediction]);
 
   return (
     <div className="flex h-screen">

@@ -1,7 +1,7 @@
 "use client";
 
 import Webcam from "react-webcam";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,13 @@ import {
   Popover,
 } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
+import * as cocossd from "@tensorflow-models/coco-ssd";
+import "@tensorflow/tfjs-backend-cpu";
+import "@tensorflow/tfjs-backend-webgl";
+import { DetectedObject, ObjectDetection } from "@tensorflow-models/coco-ssd";
+import { drawOnCanvas } from "@/utils/draw";
+
+let interval: any = null;
 
 const HomePage = () => {
   const webcamRef = useRef<Webcam>(null);
@@ -36,6 +43,51 @@ const HomePage = () => {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [autoRecordEnabled, setAutoRecordEnabled] = useState<boolean>(false);
   const [volume, setVolume] = useState(0.8);
+  const [model, setModel] = useState<ObjectDetection>();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    initModel();
+  }, []);
+
+  //Loads model
+  //set it state variable
+  async function initModel() {
+    const loadedModel: ObjectDetection = await cocossd.load({
+      base: "mobilenet_v2",
+    });
+    setModel(loadedModel);
+  }
+
+  useEffect(() => {
+    if (model) {
+      setLoading(false);
+    }
+  }, [model]);
+
+  async function runPrediction() {
+    if (
+      model &&
+      webcamRef.current &&
+      webcamRef.current.video?.readyState === 4
+    ) {
+      const predictions: DetectedObject[] = await model.detect(
+        webcamRef.current.video,
+      );
+
+      resizeCanvas(canvasRef, webcamRef);
+      drawOnCanvas(mirror, predictions, canvasRef.current?.getContext("2d"));
+    }
+  }
+
+  useEffect(() => {
+    interval = setInterval(() => {
+      runPrediction();
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [webcamRef.current, model]);
 
   return (
     <div className="flex h-screen">
@@ -133,6 +185,12 @@ const HomePage = () => {
           ></canvas>
         </div>
       </div>
+
+      {loading && (
+        <div className="z-50 absolute w-full h-full flex items-center justify-center bg-primary-foreground">
+          Gettings things ready... <Rings height={50} color="red" />
+        </div>
+      )}
     </div>
   );
 
@@ -262,3 +320,17 @@ const HomePage = () => {
 };
 
 export default HomePage;
+
+function resizeCanvas(
+  canvasRef: React.RefObject<HTMLCanvasElement>,
+  webcamRef: React.RefObject<Webcam>,
+) {
+  const canvas = canvasRef.current;
+  const video = webcamRef.current?.video;
+
+  if (canvas && video) {
+    const { videoWidth, videoHeight } = video;
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
+  }
+}
